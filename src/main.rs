@@ -23,6 +23,7 @@ Options:
     -P, --no-unpushed   Don't report unpushed branches
     -h, --help          Show this help message
     -V, --version       Display version and exit
+    -v, --verbose       Be more verbose
 ";
 
 macro_rules! unwrap_or_return {
@@ -79,11 +80,15 @@ fn git_repo_ok(p: &Path, args: &Args) -> bool {
 
     let mut summary = String::new();
     let mut errors = Vec::new();
+    let mut verbose = Vec::new();
 
     for check in checks::ALL_CHECKS {
         match check(p, args) {
             Err(err) => errors.push(err),
-            Ok(sum) => summary.push_str(sum),
+            Ok((sum, msg)) => {
+                summary.push_str(&sum);
+                verbose.push(msg);
+            },
         }
     }
     
@@ -94,6 +99,12 @@ fn git_repo_ok(p: &Path, args: &Args) -> bool {
     // All done, print summary
     if !summary.is_empty() || args.flag_all {
         println!("{:<4} {}", summary, p.to_string_lossy());
+
+        if args.flag_verbose {
+            for msg in verbose.iter().filter(|m| !m.is_empty()) {
+                println!("{}", msg);
+            }
+        }
 
         let mut errn = 0;
         for err in errors {

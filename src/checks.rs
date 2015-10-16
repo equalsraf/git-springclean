@@ -6,6 +6,12 @@
 use std::process::Command;
 use std::path::Path;
 
+/// Check functions return a message on error, on success
+/// return a tuple (summary, verbose). The summary is a
+/// string with one char per check (see CLI options),
+/// verbose is a detailed message about the errors.
+pub type CheckResult = Result<(String,String), String>;
+
 #[derive(Debug, RustcDecodable)]
 pub struct Args {
     pub flag_version: bool,
@@ -13,6 +19,7 @@ pub struct Args {
     pub flag_no_untracked: bool,
     pub flag_no_modified: bool,
     pub flag_no_unpushed: bool,
+    pub flag_verbose: bool,
     pub arg_path: String,
 }
 
@@ -47,7 +54,7 @@ fn git_branch_list(p: &Path, params: &[&str]) -> Result<Vec<String>,String> {
 /// Check if there are untracked (U) or modified (M) files inside
 /// the repository - i.e. git status.
 pub fn check_untracked_modified<'a>(p: &Path, args: &Args)
-        -> Result<&'a str,String> {
+        -> CheckResult {
 
     let output = Command::new("git")
                 .arg("status")
@@ -70,21 +77,23 @@ pub fn check_untracked_modified<'a>(p: &Path, args: &Args)
         }
     }
 
-    Ok(match (untracked,modified) {
-        (false,false) => "",
-        (true,false) => "U",
-        (false,true) => "M",
-        (true,true) => "UM",
-    })
+    let mut summary = String::new();
+    if untracked {
+        summary.push('U');
+    }
+    if modified {
+        summary.push('M');
+    }
+    Ok((summary, String::new()))
 }
 
 /// Go through all branches in the repository and make sure all are
 /// merged into at least one remote branch (P).
-pub fn check_unpushed_branches<'a>(p: &Path, args: &Args)
-        -> Result<&'a str,String> {
+pub fn check_unpushed_branches(p: &Path, args: &Args)
+        -> CheckResult {
 
     if args.flag_no_unpushed {
-        return Ok("");
+        return Ok((String::new(), String::new()));
     }
 
     let mut local_branches = try!(git_branch_list(p, &[]));
@@ -103,13 +112,16 @@ pub fn check_unpushed_branches<'a>(p: &Path, args: &Args)
     }
 
     if !local_branches.is_empty() {
-        Ok("P")
+        let desc = local_branches.iter().fold("".to_string(),
+                    |a, b| if !a.is_empty() {a + ", "} else {a} + b);
+        Ok(("P".to_string(),
+            format!("(P) The following branches were not pushed to any remote: {}", desc)))
     } else {
-        Ok("")
+        Ok((String::new(), String::new()))
     }
 }
 
-pub const ALL_CHECKS: &'static [&'static Fn(&Path, &Args) -> Result<&'static str,String>] = &[
+pub const ALL_CHECKS: &'static [&'static Fn(&Path, &Args) -> CheckResult] = &[
     &check_unpushed_branches,
     &check_untracked_modified,
 ];
