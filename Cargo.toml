@@ -1,0 +1,9 @@
+[package]
+name = "git-springclean"
+version = "0.0.1"
+authors = ["raf"]
+
+[dependencies]
+docopt = "0.6"
+rustc-serialize = "0.3"
+
