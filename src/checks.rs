@@ -5,6 +5,7 @@
 
 use std::process::Command;
 use std::path::Path;
+use serde::Deserialize;
 
 /// Check functions return a message on error, on success
 /// return a tuple (summary, verbose). The summary is a
@@ -12,7 +13,7 @@ use std::path::Path;
 /// verbose is a detailed message about the errors.
 pub type CheckResult = Result<(String,String), String>;
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 pub struct Args {
     pub flag_version: bool,
     pub flag_all: bool,

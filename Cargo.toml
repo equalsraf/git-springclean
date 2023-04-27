@@ -1,8 +1,8 @@
 [package]
 name = "git-springclean"
 version = "0.0.1"
+edition = "2021"
 
 [dependencies]
-docopt = "0.6"
-rustc-serialize = "0.3"
-
+docopt = "1"
+serde = "1"

@@ -1,7 +1,4 @@
-extern crate docopt;
-extern crate rustc_serialize;
 
-use std::io::Write;
 use std::process::exit;
 use std::env::current_dir;
 use std::path::Path;
@@ -40,15 +37,6 @@ macro_rules! unwrap_or_continue {
         if let Ok(val) = $e { val } else { continue }
     };
 }
-
-macro_rules! println_stderr(
-    ($($arg:tt)*) => (
-        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
-            Ok(_) => {},
-            Err(x) => panic!("Unable to write to stderr: {}", x),
-        }
-    )
-);
 
 /// Call **f** on all git repositories in path **p**
 /// Returns the number of repos where f returned true
@@ -108,7 +96,7 @@ fn git_repo_ok(p: &Path, args: &Args) -> bool {
 
         let mut errn = 0;
         for err in errors {
-            println_stderr!("[Error{}]:{}", errn, err);
+            eprintln!("[Error{}]:{}", errn, err);
             errn += 1;
         }
     }
@@ -118,7 +106,7 @@ fn git_repo_ok(p: &Path, args: &Args) -> bool {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
     if args.flag_version {
         println!("git-springclean {}", env!("CARGO_PKG_VERSION"));
@@ -130,7 +118,7 @@ fn main() {
     path.push(&args.arg_path);
 
     if let Err(err) = metadata(&path) {
-        println_stderr!("Unable to read {}: {}", path.to_string_lossy(), err);
+        eprintln!("Unable to read {}: {}", path.to_string_lossy(), err);
         exit(-1);
     } else {
         // Return the number of repos that failed
