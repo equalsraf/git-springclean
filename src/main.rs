@@ -45,25 +45,24 @@ fn for_all_git_repos(p: &Path,
         -> i32 {
 
     let mut count = 0;
+
+    if p.join(".git").exists() {
+        return if !f(p, args) { 1 } else { 0 };
+    }
+
     for entry in unwrap_or_return!(read_dir(p), 0) {
         let entry = unwrap_or_continue!(entry);
         if !unwrap_or_continue!(entry.file_type()).is_dir() {
             continue
         }
 
-        if ".git" == &entry.file_name() {
-            if !f(p, args) {
-                count += 1;
-            }
-            break;
-        } else {
-            count += for_all_git_repos(&entry.path(), f, args);
-        }
+        count += for_all_git_repos(&entry.path(), f, args);
     }
     count
 }
 
-/// Check git repository for issues
+/// Check git repository for issues. Return true if all is well.
+/// Print out results.
 fn git_repo_ok(p: &Path, args: &Args) -> bool {
 
     let mut summary = String::new();
