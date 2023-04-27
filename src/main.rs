@@ -1,9 +1,10 @@
 
 use std::process::exit;
 use std::env::current_dir;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::read_dir;
 use std::fs::metadata;
+use std::collections::HashSet;
 use docopt::Docopt;
 
 mod checks;
@@ -59,6 +60,37 @@ fn for_all_git_repos(p: &Path,
         count += for_all_git_repos(&entry.path(), f, args);
     }
     count
+}
+
+fn find_missing_repos(p: PathBuf) -> (HashSet<PathBuf>, bool) {
+    if p.join(".git").exists() {
+        return (HashSet::new(), true);
+    }
+
+    let mut result = HashSet::new();
+    let mut found_some = false;
+
+    for entry in unwrap_or_return!(read_dir(&p), (HashSet::new(), false)) {
+        let entry = unwrap_or_continue!(entry);
+        if !unwrap_or_continue!(entry.file_type()).is_dir() {
+            continue
+        }
+        match find_missing_repos(entry.path()) {
+            (missing, true) => {
+                result.extend(missing.into_iter());
+                found_some = true;
+            }
+            (missing, false) => {
+                result.extend(missing.into_iter());
+            }
+        }
+    }
+
+    if found_some {
+        (result, true)
+    } else {
+        (HashSet::from([p]), false)
+    }
 }
 
 /// Check git repository for issues. Return true if all is well.
@@ -120,8 +152,18 @@ fn main() {
         eprintln!("Unable to read {}: {}", path.to_string_lossy(), err);
         exit(-1);
     } else {
-        // Return the number of repos that failed
-        exit(for_all_git_repos(&path, &git_repo_ok, &args));
+        // Find paths without repos
+        let (missing, _) = find_missing_repos(path.to_path_buf());
+        for p in &missing {
+            println!("{:<4} {}", '!', p.display());
+
+            if args.flag_verbose {
+                println!("(!) There is no git repo in this path");
+            }
+        }
+
+        // Return the number of paths that failed
+        exit(for_all_git_repos(&path, &git_repo_ok, &args) + (missing.len() as i32));
     }
 }
 
