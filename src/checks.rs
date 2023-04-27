@@ -96,14 +96,14 @@ pub fn check_unpushed_branches(p: &Path, args: &Args)
         return Ok((String::new(), String::new()));
     }
 
-    let mut local_branches = try!(git_branch_list(p, &[]));
-    let remote_branches = try!(git_branch_list(p, &["-r"]));
+    let mut local_branches = git_branch_list(p, &[])?;
+    let remote_branches = git_branch_list(p, &["-r"])?;
 
     for remote in remote_branches {
         if local_branches.is_empty() {
             break;
         }
-        let merged = try!(git_branch_list(p, &["--merged", &remote]));
+        let merged = git_branch_list(p, &["--merged", &remote])?;
         for branch in merged {
             if let Some(pos) = local_branches.iter().position(|e| e == &branch) {
                 local_branches.remove(pos);
@@ -121,7 +121,7 @@ pub fn check_unpushed_branches(p: &Path, args: &Args)
     }
 }
 
-pub const ALL_CHECKS: &'static [&'static Fn(&Path, &Args) -> CheckResult] = &[
+pub const ALL_CHECKS: &'static [&'static dyn Fn(&Path, &Args) -> CheckResult] = &[
     &check_unpushed_branches,
     &check_untracked_modified,
 ];

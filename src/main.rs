@@ -53,7 +53,7 @@ macro_rules! println_stderr(
 /// Call **f** on all git repositories in path **p**
 /// Returns the number of repos where f returned true
 fn for_all_git_repos(p: &Path, 
-        f: &Fn(&Path, &Args) -> bool, args: &Args) 
+        f: &dyn Fn(&Path, &Args) -> bool, args: &Args)
         -> i32 {
 
     let mut count = 0;
